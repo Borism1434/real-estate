@@ -1,0 +1,111 @@
+
+# ======================================================
+# 🧠 GENERAL & SYSTEM FILES
+# ======================================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.dll
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Environment / secrets
+.env
+.env.*
+*.key
+*.pem
+*.crt
+*.cert
+
+# ======================================================
+# 🧰 PYTHON / DATA ENGINEERING FILES
+# ======================================================
+# Bytecode cache
+__pycache__/
+
+# Logs
+logs/
+*.log
+
+# Local SQLite / cache / temp
+*.db
+*.sqlite
+*.tmp
+*.bak
+*.swp
+
+# ======================================================
+# 📊 ANALYTICS OUTPUTS (IMAGES, REPORTS, ETC.)
+# ======================================================
+analytics/tmp/
+analytics/*.png
+analytics/**/*.png
+analytics/*.jpg
+analytics/**/*.jpg
+analytics/*.jpeg
+analytics/**/*.jpeg
+analytics/*.gif
+analytics/**/*.gif
+analytics/*.pdf
+analytics/**/*.pdf
+analytics/*.csv
+analytics/**/*.csv
+analytics/*.xlsx
+analytics/**/*.xlsx
+analytics/*.html
+analytics/**/*.html
+
+# ======================================================
+# 🗂️ DATA EXTRACTS & PARQUET FILES
+# ======================================================
+data/*.csv
+data/*.xlsx
+data/*.parquet
+data/**/*.csv
+data/**/*.xlsx
+data/**/*.parquet
+
+# ======================================================
+# 🧱 DBT ARTIFACTS / DEPENDENCIES
+# ======================================================
+dbt_packages/
+dbt_modules/
+target/
+manifest.json
+run_results.json
+api_access.json
+
+# ======================================================
+# 🧠 NOTEBOOK / JUPYTER OUTPUTS
+# ======================================================
+.ipynb_checkpoints/
+*.ipynb_convert
+*.nbconvert.ipynb
+
+# ======================================================
+# 🌍 NODE / JS FILES (IF PRESENT)
+# ======================================================
+node_modules/
+package-lock.json
+
+# ======================================================
+# 🧾 MISC
+# ======================================================
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.bak
+*.old
+*.orig
+install_dbt_packages.sh

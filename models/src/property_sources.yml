@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: propstream         # This is the source name used in {{ source() }}
+    schema: stg              # Actual schema in Postgres
+    database: real_estate    # Your default database
+    tables:
+      - name: prop_extract   # This is the only raw table (do not include dbt models!)
