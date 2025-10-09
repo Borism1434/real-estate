@@ -2,7 +2,7 @@
 
 WITH base AS (
     SELECT *
-    from {{ source('propstream', 'stg__deduped_src') }}
+    from {{ ref('stg__deduped_src') }}
 ),
 
 -- -- GENERAL SCORE (0–100)

@@ -3,7 +3,7 @@
 WITH deduped AS (
     SELECT DISTINCT ON (apn, address)
         *
-    from {{ source('propstream', 'stg__property_listings') }}
+    from {{ ref('stg__property_listings') }}
     ORDER BY apn, address, extract_date DESC
 )
 

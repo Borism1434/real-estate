@@ -146,3 +146,4 @@ flags as (
 
 select * 
 from flags
+

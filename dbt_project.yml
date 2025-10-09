@@ -21,7 +21,6 @@ models:
       +materialized: table
     intermediate:
       +schema: int
-      +materialized: table
+
     analytics:
       +schema: analytics
-      +materialized: table
