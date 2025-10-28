@@ -90,6 +90,8 @@ api_access.json
 .ipynb_checkpoints/
 *.ipynb_convert
 *.nbconvert.ipynb
+*.ipynb
+
 
 # ======================================================
 # 🌍 NODE / JS FILES (IF PRESENT)
@@ -109,3 +111,4 @@ package-lock.json
 *.old
 *.orig
 install_dbt_packages.sh
+etl/gsheet.ipynb
