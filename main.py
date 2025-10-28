@@ -8,14 +8,12 @@ from etl.extract import load_latest_xlsx_by_modified_date
 from etl.transform import clean_raw_dataframe
 from etl.loader import load_dataframe
 from etl.gsheet import upload_df_to_gsheet, add_zillow_link_column, export_and_process_data, clean_export_dataframe
-from etl.backup_loader import run_query
+from etl.loader import run_query
 
 # Google Sheets API libraries for uploading final data
 import gspread
 from gspread_dataframe import set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
-
-
 
 # -------------------------------
 # MAIN ETL PIPELINE
