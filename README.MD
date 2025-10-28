@@ -35,3 +35,9 @@ This project automates the extraction, transformation, and loading (ETL) of real
 ## Long-Term Vision
 
 Deliver a fully automated, end-to-end pipeline that empowers you to perform custom list pulls without manual data handling, providing seamless, up-to-date access to real estate insights via Google Sheets.
+
+## Future Improvements
+
+1. Modify `main.py` to create a new tab in the Google Sheet for each run of the script, preventing overwriting data on the same page repeatedly.
+2. Enhance Zillow link integration by adding a scraper or filtering process to check the current status of listings (e.g., "active," "pending," or "off market") and add an additional column in the exported spreadsheet to indicate if a listing is no longer active.
+3. Add an estimated cash cost for fixing the property by calculating investment based on price per square foot increase. For example, if the target price increase per sqft is $50 and the property is 1500 sqft, compute total estimated investment accordingly.
