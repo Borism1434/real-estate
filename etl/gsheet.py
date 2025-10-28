@@ -2,7 +2,7 @@
 import gspread
 from gspread_dataframe import set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
-from etl.backup_loader import run_query
+from etl.loader import run_query
 import pandas as pd
 import datetime
 
