@@ -5,7 +5,46 @@ from oauth2client.service_account import ServiceAccountCredentials
 from etl.loader import run_query
 import pandas as pd
 import datetime
+import requests
+from bs4 import BeautifulSoup
+import time
+from gspread_formatting import (
+    Borders,
+    Border,
+    CellFormat,
+    format_cell_range,
+    Color,
+    cellFormat,
+    textFormat,
+    numberFormat,
+    BooleanCondition, 
+    DataValidationRule,
+    set_data_validation_for_cell_range
+)
 
+def add_column_right_border(worksheet, df, col_name, start_row=1, end_row=1000):
+    """
+    Adds a solid right border to a column titled col_name (by name, not index).
+    """
+    try:
+        col_idx = df.columns.get_loc(col_name) + 1  # 1-based index
+        # The range for the column (A1 notation)
+        col_a1 = gspread.utils.rowcol_to_a1(start_row, col_idx)
+        col_a1_end = gspread.utils.rowcol_to_a1(end_row, col_idx)
+        rng = f"{col_a1}:{col_a1_end}"
+
+        # Set only the right border
+        border_style = Borders(
+            right=Border("SOLID", Color(0, 0, 0))
+        )
+        fmt = CellFormat(borders=border_style)
+        format_cell_range(worksheet, rng, fmt)
+    except Exception as e:
+        print(f"Could not add border after col {col_name}: {e}")
+
+# Example usage after upload:
+# for col in ["mls_amount", "address"]:
+#     add_column_right_border(worksheet, df_final, col)
 
 def upload_df_to_gsheet(df, tab_name, creds_path, sheet_title, start_cell="A1"):
     scope = ['https://spreadsheets.google.com/feeds',
@@ -42,7 +81,7 @@ def add_zillow_link_column(df):
     cols = df.columns.tolist()
     cols.insert(0, cols.pop(cols.index("Zillow Link")))
     df = df[cols]
-    return df
+    return df 
 
 
 def clean_export_dataframe(df):
@@ -68,7 +107,7 @@ def clean_export_dataframe(df):
 
 def export_and_process_data(query=None):
     default_query = """
-    SELECT
+    select
     *
     FROM analytics.analytics_single_prop
     ORDER BY total_score DESC
@@ -100,26 +139,28 @@ def export_and_process_data(query=None):
 
     desired_order = [
         "Zillow Link",
+        "zip",
+        
+        "total_score",
         "price_per_sqft",
         "mls_amount",
         "est_value",
         "diff",
-        "perc_price_inc",
-        "listed_price_inc",
-        "total_score",
-        "mls_days_on_market",
         "address",
         "building_sqft",
         "lot_size_sqft",
+        "total_loan_balance",
+        "last_sale_amount",
+        "lien_amount",
+        "est_equity_calc",
+        "perc_price_inc",
+        "total_open_loans",
+        "listed_price_inc",
+        "mls_days_on_market",
         "lot_coverage_ratio",
         "lot_size_per_building_sqft",
         "mls_date",
         "last_sale_date",
-        "last_sale_amount",
-        "total_open_loans",
-        "total_loan_balance",
-        "lien_amount",
-        "est_equity_calc",
         "ltv_calc",
         "effective_year_built",
         "is_owner_occupied",
@@ -137,7 +178,107 @@ def export_and_process_data(query=None):
     df_final = df_linked[existing_columns]
     return df_final
 
+def create_new_tab(sheet_title, creds_path, prefix="Export"):
+    """
+    Creates a new tab in the Google Sheet with a unique name based on timestamp.
+    Adds basic formatting for headers and account/percent columns.
+    Returns the new tab name.
+    """
+    scope = ['https://spreadsheets.google.com/feeds',
+             'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+    client = gspread.authorize(creds)
+    sheet = client.open(sheet_title)
 
+    # Generate tab name with date and time for uniqueness
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H%M')
+    tab_name = f"{prefix}_{timestamp}"
+    tab_name = tab_name[:99]  # Sheets limit
+
+    # Create the new sheet/tab
+    worksheet = sheet.add_worksheet(title=tab_name, rows="1000", cols="20")
+
+    # ---- Formatting (after data uploaded) ----
+    # We'll use a separate function after you upload the dataframe to format
+
+    return tab_name
+
+
+def add_checkbox_column(df):
+    df = df.copy()
+    df.insert(0, 'Interested', "")  # Use "" (empty string) for header so it doesn't get validated as checkbox
+    return df
+
+
+def format_tab(worksheet, df, currency_cols=None, percent_cols=None, int_cols=None, border_after_cols=None, add_checkboxes=False):
+    """
+    Apply bold header, currency, percent, and integer formatting to the worksheet.
+    Add a right border after each column in border_after_cols.
+    """
+    # Bold all column names (header row 1)
+    format_cell_range(worksheet, '1:1',
+        cellFormat(textFormat=textFormat(bold=True)))
+
+    # Format currency columns
+    if currency_cols:
+        for col in currency_cols:
+            try:
+                col_idx = df.columns.get_loc(col) + 1
+                rng = gspread.utils.rowcol_to_a1(2, col_idx) + ':' + gspread.utils.rowcol_to_a1(1000, col_idx)
+                format_cell_range(worksheet, rng,
+                                  cellFormat(numberFormat=numberFormat(type='NUMBER', pattern='"$"#,##0')))
+            except Exception as e:
+                print(f"Error formatting currency col {col}: {e}")
+
+    # Format percent columns
+    if percent_cols:
+        for col in percent_cols:
+            try:
+                col_idx = df.columns.get_loc(col) + 1
+                rng = gspread.utils.rowcol_to_a1(2, col_idx) + ':' + gspread.utils.rowcol_to_a1(1000, col_idx)
+                format_cell_range(worksheet, rng,
+                                  cellFormat(numberFormat=numberFormat(type='PERCENT', pattern='0%')))
+            except Exception as e:
+                print(f"Error formatting percent col {col}: {e}")
+
+    # Format integer (comma, no decimal) columns
+    if int_cols:
+        for col in int_cols:
+            try:
+                col_idx = df.columns.get_loc(col) + 1
+                rng = gspread.utils.rowcol_to_a1(2, col_idx) + ':' + gspread.utils.rowcol_to_a1(1000, col_idx)
+                format_cell_range(worksheet, rng,
+                                  cellFormat(numberFormat=numberFormat(type='NUMBER', pattern='#,##0')))
+            except Exception as e:
+                print(f"Error formatting integer col {col}: {e}")
+
+    # Add right border after specified columns
+    if border_after_cols:
+        for col in border_after_cols:
+            try:
+                col_idx = df.columns.get_loc(col) + 1
+                # A1 range for full column (header to row 1000)
+                range_a1 = f"{gspread.utils.rowcol_to_a1(1, col_idx)}:{gspread.utils.rowcol_to_a1(1000, col_idx)}"
+                border_style = Borders(
+                    right=Border("Double", Color(0, 0, 0), width=2)
+                )
+                fmt = cellFormat(borders=border_style)
+                format_cell_range(worksheet, range_a1, fmt)
+            except Exception as e:
+                print(f"Error setting border after col {col}: {e}")
+
+    # Add a checkbox column at column A if requested
+    if add_checkboxes:
+        try:
+            n_rows = len(df) + 1  # total rows including header
+            checkbox_range = f"A2:A{n_rows}"  # Start from row 2, not row 1
+            rule = DataValidationRule(
+                BooleanCondition('BOOLEAN', []),
+                showCustomUi=True
+            )
+            set_data_validation_for_cell_range(worksheet, checkbox_range, rule)
+        except Exception as e:
+            print(f"Error adding checkboxes: {e}")
 
 # Example use:
 # df_export = export_and_process_data()
