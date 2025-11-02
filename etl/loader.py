@@ -1,5 +1,5 @@
 # %%
-# db.py
+# loader.py
 from sqlalchemy import create_engine, text
 import os
 import pandas as pd
@@ -232,9 +232,72 @@ def load_dataframe(
                 print("❌ Load failed:", e)
 
 
-                
+
+
+
+
+def create_export_log_table():
+    ddl = """
+    CREATE TABLE IF NOT EXISTS exported_properties_log (
+        property_id VARCHAR PRIMARY KEY,
+        export_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+    execute_sql(ddl)
+    print("✅ ensured exported_properties_log table exists")       
 
                 
+
+
+
+
+def insert_uploaded_to_db(df: pd.DataFrame, table_name="stg__list_history", schema="stg"):
+    """
+    Insert rows from the dataframe into the 'stg__list_history' table.
+    Only the 'apn' column is used as a unique listing identifier.
+    Duplicate apn values will be ignored based on a unique constraint.
+    """
+    from psycopg2.extras import execute_values
+
+    # Clean and check column
+    df = df.copy()
+    df.columns = (
+        df.columns
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .str.replace(r"[^\w]+", "_", regex=True)
+        .str.replace(r"_+", "_", regex=True)
+        .str.strip("_")
+    )
+    if "apn" not in df.columns:
+        raise Exception("Required column 'apn' not found in dataframe.")
+    rows = [(apn,) for apn in df["apn"].dropna().astype(str)]
+
+    if not rows:
+        print("⚠️ No APNs to insert into stg__list_history.")
+        return
+
+    query = f"""
+        INSERT INTO {schema}.{table_name} (apn)
+        VALUES %s
+        ON CONFLICT (apn) DO NOTHING
+    """
+
+    with get_psycopg2_conn() as conn:
+        with conn.cursor() as cur:
+            execute_values(cur, query, rows)
+            conn.commit()
+    print(f"✅ Inserted {len(rows)} APNs (deduplicated by DB) into {schema}.{table_name}")
+
+
+
+
+
+
+
+
+
 
 # %%
 # Testing Data Upload

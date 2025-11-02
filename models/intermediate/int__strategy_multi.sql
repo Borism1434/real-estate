@@ -2,7 +2,7 @@
 
 WITH base AS (
     SELECT *
-    from {{ ref('stg__deduped_src') }}
+    from {{ ref('stg__property_listings') }}
 ),
 
 -- -- GENERAL SCORE (0–100)

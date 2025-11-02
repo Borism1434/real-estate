@@ -1,8 +1,8 @@
-name: real_estate
+name: 'real_estate'
 version: '1.0'
 config-version: 2
 
-profile: real_estate
+profile: 'my_profile'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -12,15 +12,14 @@ seed-paths: ["seeds"]
 snapshot-paths: ["snapshots"]
 
 target-path: "target"
-clean-targets: ["target", "dbt_modules"]
+clean-targets: ["target", "dbt_packages"]
 
 models:
   real_estate:
+    +materialized: table
     staging:
       +schema: stg
-      +materialized: table
     intermediate:
       +schema: int
-
     analytics:
       +schema: analytics

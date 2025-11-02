@@ -90,13 +90,14 @@ def clean_export_dataframe(df):
     # Format currency columns with commas
     for col in ['mls_amount', 'price_per_sqft', 'building_sqft']:
         if col in df.columns:
-            df[col] = df[col].round().astype('Int64').map("{:,}".format)
+            df[col] = pd.to_numeric(df[col], errors='coerce').round().astype('Int64').map("{:,}".format)
 
     # Round score columns if present
     score_cols = ['total_score']
     for col in score_cols:
         if col in df.columns:
-            df[col] = df[col].round(1)
+            df[col] = pd.to_numeric(df[col], errors='coerce').round(1)
+
 
     # Convert date/datetime to string
     for col in df.columns:
@@ -140,7 +141,6 @@ def export_and_process_data(query=None):
     desired_order = [
         "Zillow Link",
         "zip",
-        
         "total_score",
         "price_per_sqft",
         "mls_amount",
@@ -172,7 +172,8 @@ def export_and_process_data(query=None):
         "mls_agent_phone",
         "mls_agent_email",
         "mls_brokerage_name",
-        "mls_brokerage_phone"
+        "mls_brokerage_phone",
+        "apn"
     ]
     existing_columns = [col for col in desired_order if col in df_linked.columns]
     df_final = df_linked[existing_columns]
@@ -215,50 +216,61 @@ def format_tab(worksheet, df, currency_cols=None, percent_cols=None, int_cols=No
     Apply bold header, currency, percent, and integer formatting to the worksheet.
     Add a right border after each column in border_after_cols.
     """
+    from gspread_formatting import (
+        cellFormat, textFormat, numberFormat, Borders, Border, Color,
+        DataValidationRule, BooleanCondition, set_data_validation_for_cell_range, format_cell_range
+    )
+    
     # Bold all column names (header row 1)
     format_cell_range(worksheet, '1:1',
-        cellFormat(textFormat=textFormat(bold=True)))
-
+                      cellFormat(textFormat=textFormat(bold=True)))
+    
+    n_rows = len(df) + 1  # +1 for header row
+    
+    def col_range(col_name):
+        col_idx = df.columns.get_loc(col_name) + 1
+        # from row 2 to last data row
+        start_a1 = gspread.utils.rowcol_to_a1(2, col_idx)
+        end_a1 = gspread.utils.rowcol_to_a1(n_rows, col_idx)
+        return f"{start_a1}:{end_a1}"
+    
     # Format currency columns
     if currency_cols:
         for col in currency_cols:
             try:
-                col_idx = df.columns.get_loc(col) + 1
-                rng = gspread.utils.rowcol_to_a1(2, col_idx) + ':' + gspread.utils.rowcol_to_a1(1000, col_idx)
+                rng = col_range(col)
                 format_cell_range(worksheet, rng,
                                   cellFormat(numberFormat=numberFormat(type='NUMBER', pattern='"$"#,##0')))
             except Exception as e:
                 print(f"Error formatting currency col {col}: {e}")
-
+    
     # Format percent columns
     if percent_cols:
         for col in percent_cols:
             try:
-                col_idx = df.columns.get_loc(col) + 1
-                rng = gspread.utils.rowcol_to_a1(2, col_idx) + ':' + gspread.utils.rowcol_to_a1(1000, col_idx)
+                rng = col_range(col)
                 format_cell_range(worksheet, rng,
                                   cellFormat(numberFormat=numberFormat(type='PERCENT', pattern='0%')))
             except Exception as e:
                 print(f"Error formatting percent col {col}: {e}")
-
-    # Format integer (comma, no decimal) columns
+    
+    # Format integer columns
     if int_cols:
         for col in int_cols:
             try:
-                col_idx = df.columns.get_loc(col) + 1
-                rng = gspread.utils.rowcol_to_a1(2, col_idx) + ':' + gspread.utils.rowcol_to_a1(1000, col_idx)
+                rng = col_range(col)
                 format_cell_range(worksheet, rng,
                                   cellFormat(numberFormat=numberFormat(type='NUMBER', pattern='#,##0')))
             except Exception as e:
                 print(f"Error formatting integer col {col}: {e}")
-
+    
     # Add right border after specified columns
     if border_after_cols:
         for col in border_after_cols:
             try:
                 col_idx = df.columns.get_loc(col) + 1
-                # A1 range for full column (header to row 1000)
-                range_a1 = f"{gspread.utils.rowcol_to_a1(1, col_idx)}:{gspread.utils.rowcol_to_a1(1000, col_idx)}"
+                # from first row (header) to last data row
+                range_a1 = f"{gspread.utils.rowcol_to_a1(1, col_idx)}:{gspread.utils.rowcol_to_a1(n_rows, col_idx)}"
                 border_style = Borders(
                     right=Border("Double", Color(0, 0, 0), width=2)
                 )
@@ -266,17 +278,24 @@ def format_tab(worksheet, df, currency_cols=None, percent_cols=None, int_cols=No
                 format_cell_range(worksheet, range_a1, fmt)
             except Exception as e:
                 print(f"Error setting border after col {col}: {e}")
-
-    # Add a checkbox column at column A if requested
+    
+    # Add checkbox column at column A if requested
     if add_checkboxes:
         try:
-            n_rows = len(df) + 1  # total rows including header
-            checkbox_range = f"A2:A{n_rows}"  # Start from row 2, not row 1
-            rule = DataValidationRule(
-                BooleanCondition('BOOLEAN', []),
-                showCustomUi=True
-            )
-            set_data_validation_for_cell_range(worksheet, checkbox_range, rule)
+            if len(df) > 0:
+                if len(df) > 0:
+                    n_rows = len(df) + 1  # Header + data rows
+                    checkbox_range = f"A2:A{n_rows}"
+                    # apply data validation...
+                else:
+                    print("No data rows, skipping checkbox formatting")
+                rule = DataValidationRule(
+                    BooleanCondition('BOOLEAN', []),
+                    showCustomUi=True
+                )
+                set_data_validation_for_cell_range(worksheet, checkbox_range, rule)
+            else:
+                print("No rows to add checkboxes")
         except Exception as e:
             print(f"Error adding checkboxes: {e}")
 

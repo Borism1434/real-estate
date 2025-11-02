@@ -12,6 +12,10 @@ from etl.loader import run_query
 from etl.gsheet import create_new_tab
 from etl.gsheet import format_tab
 from etl.gsheet import add_checkbox_column
+from etl.loader import insert_uploaded_to_db
+
+
+
 
 
 # Google Sheets API libraries for uploading final data
@@ -69,7 +73,6 @@ df_final = add_checkbox_column(df_final)
 upload_df_to_gsheet(df_final, tab_name, creds_path, sheet_title)
 
 
-
 # 4. Get the worksheet object
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
@@ -94,3 +97,8 @@ format_tab(
     add_checkboxes=True    # <-- here!
 )
 print(f"✅ Uploaded and formatted on new tab: {tab_name}")
+
+# After uploading to Google Sheets and formatting:
+insert_uploaded_to_db(df_final)
+
+print("insert_uploaded_to_db() rows into db")
