@@ -142,8 +142,17 @@ flags as (
         
 
     from base_with_metrics
+),
+
+deduped as (
+    select distinct on (apn, address) *
+    from flags
+    order by apn, address, extract_date desc
 )
+
 
 select * 
 from flags
+
+
 
